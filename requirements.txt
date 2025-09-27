@@ -1,0 +1,29 @@
+# Core FastAPI dependencies
+fastapi
+uvicorn[standard]
+python-multipart
+
+# PDF processing libraries
+pdfplumber
+PyPDF2
+pdf2image
+pytesseract
+
+# Text processing
+spacy
+nltk
+regex
+
+# OpenAI API
+openai
+
+# Data handling and validation
+pydantic
+pydantic-settings
+python-dotenv
+
+# Additional utilities
+requests
+Pillow
+numpy
+gunicorn

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python test:*)",
+      "Read(C:\\Users\\Maram Deepak\\Desktop\\AI ATP sol/**)",
+      "Bash(find:*)",
+      "Bash(xargs rm:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

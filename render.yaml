@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: sow-ai-extraction
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4-1106-preview
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: DEBUG
+        value: false
