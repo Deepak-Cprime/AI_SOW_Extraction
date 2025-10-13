@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request
 from fastapi.responses import JSONResponse
 import uvicorn
 import os
@@ -18,10 +18,42 @@ app = FastAPI(
 
 settings = get_settings()
 
+@app.get("/")
+async def root():
+    """Root endpoint with API information"""
+    return {
+        "service": "SOW AI Extraction API",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/health",
+            "extract_multipart": "/extract-sow",
+            "extract_base64": "/extract-sow-base64"
+        },
+        "docs": "/docs"
+    }
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "SOW AI Extraction"}
+
+@app.post("/debug-request")
+async def debug_request(request: Request):
+    """Debug endpoint to see what Salesforce is sending"""
+    try:
+        body = await request.body()
+        json_data = await request.json() if body else {}
+        return {
+            "headers": dict(request.headers),
+            "content_type": request.headers.get("content-type"),
+            "body_raw": body.decode('utf-8')[:500] if body else None,
+            "body_parsed": json_data,
+            "has_filename": "filename" in json_data if json_data else False,
+            "has_file_content": "file_content" in json_data if json_data else False,
+            "json_keys": list(json_data.keys()) if json_data else []
+        }
+    except Exception as e:
+        return {"error": str(e), "body": body.decode('utf-8')[:500] if body else None}
 
 @app.post("/extract-sow", response_model=SOWExtractionResponse)
 async def extract_sow(file: UploadFile = File(...)):
