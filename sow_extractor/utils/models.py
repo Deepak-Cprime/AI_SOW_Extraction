@@ -40,3 +40,7 @@ class SOWExtractionResponse(BaseModel):
     deliverables: List[Deliverable] = Field(default_factory=list, description="Extracted deliverables")
     metadata: ProcessingMetadata = Field(..., description="Processing metadata and confidence scores")
 
+class Base64PDFRequest(BaseModel):
+    filename: str = Field(..., description="Name of the PDF file", example="sample_sow.pdf")
+    file_content: str = Field(..., description="Base64 encoded PDF file content")
+
