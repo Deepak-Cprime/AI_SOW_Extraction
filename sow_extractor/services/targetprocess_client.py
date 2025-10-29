@@ -46,27 +46,50 @@ class TargetProcessClient:
         }
 
         try:
+            url = f"{self.api_url}?access_token={self.access_token}"
+            logger.info(f"Sending milestone to TargetProcess: {url}")
+            logger.debug(f"Payload: {payload}")
+
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{self.api_url}?access_token={self.access_token}",
+                    url,
                     json=payload,
                     headers={"Content-Type": "application/json"}
                 )
 
-                response.raise_for_status()
-                result = response.json()
+                # Log response details
+                logger.info(f"TargetProcess response status: {response.status_code}")
+                logger.debug(f"Response headers: {dict(response.headers)}")
+                logger.debug(f"Response body: {response.text[:500]}")  # First 500 chars
 
-                logger.info(f"Successfully sent milestone '{payload['Name']}' to TargetProcess. ID: {result.get('Id')}")
-                return result
+                # Check if response is successful
+                response.raise_for_status()
+
+                # Handle empty response
+                if not response.text or response.text.strip() == "":
+                    logger.warning("TargetProcess returned empty response")
+                    return {"status": "created", "message": "Empty response from TargetProcess"}
+
+                # Try to parse JSON
+                try:
+                    result = response.json()
+                    logger.info(f"Successfully sent milestone '{payload['Name']}' to TargetProcess. ID: {result.get('Id')}")
+                    return result
+                except ValueError as json_err:
+                    logger.error(f"Failed to parse JSON response: {json_err}")
+                    logger.error(f"Response text: {response.text}")
+                    return {"status": "unknown", "response_text": response.text}
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error sending milestone to TargetProcess: {e.response.status_code} - {e.response.text}")
+            logger.error(f"HTTP error sending milestone to TargetProcess: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
             raise
         except httpx.RequestError as e:
             logger.error(f"Request error sending milestone to TargetProcess: {str(e)}")
             raise
         except Exception as e:
             logger.error(f"Unexpected error sending milestone to TargetProcess: {str(e)}")
+            logger.exception("Full traceback:")
             raise
 
     async def send_milestones_batch(self, milestones: List[Dict[str, Any]]) -> List[Optional[Dict[str, Any]]]:

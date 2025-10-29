@@ -9,6 +9,7 @@ from typing import Dict, Any
 from sow_extractor.core.orchestrator import SOWOrchestrator
 from sow_extractor.core.config import get_settings
 from sow_extractor.utils.models import SOWExtractionResponse, Base64PDFRequest
+from sow_extractor.services.targetprocess_client import TargetProcessClient
 
 app = FastAPI(
     title="SOW AI Extraction API",
@@ -120,6 +121,50 @@ async def extract_sow_base64(request: Base64PDFRequest):
         # Clean up temporary file
         if temp_file_path and os.path.exists(temp_file_path):
             os.unlink(temp_file_path)
+
+@app.post("/test-targetprocess")
+async def test_targetprocess(milestone_data: Dict[str, Any] = None):
+    """
+    Test endpoint to debug TargetProcess API connection
+
+    Send a test milestone to TargetProcess to verify connectivity and API format
+    """
+    try:
+        tp_client = TargetProcessClient()
+
+        if not tp_client.domain or not tp_client.access_token:
+            return {
+                "status": "error",
+                "message": "TargetProcess credentials not configured",
+                "config": {
+                    "domain_set": bool(tp_client.domain),
+                    "token_set": bool(tp_client.access_token)
+                }
+            }
+
+        # Use provided data or create test milestone
+        test_milestone = milestone_data or {
+            "name": "Test Milestone",
+            "description": "This is a test milestone from API",
+            "due_date": "2024-12-31",
+            "payment_amount": "$1000"
+        }
+
+        result = await tp_client.send_milestone(test_milestone)
+
+        return {
+            "status": "success",
+            "message": "Successfully sent milestone to TargetProcess",
+            "request": test_milestone,
+            "response": result
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "type": type(e).__name__
+        }
 
 
 if __name__ == "__main__":
