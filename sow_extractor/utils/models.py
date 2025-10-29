@@ -34,6 +34,8 @@ class ProcessingMetadata(BaseModel):
     deliverables_extracted: Optional[int] = Field(default=None, description="Number of deliverables extracted")
     extraction_method: Optional[str] = Field(default=None, description="Extraction method used")
     markdown_saved: Optional[bool] = Field(default=None, description="Whether markdown was saved")
+    targetprocess_sync_status: Optional[str] = Field(default=None, description="TargetProcess sync status")
+    targetprocess_milestones_sent: Optional[int] = Field(default=None, description="Number of milestones sent to TargetProcess")
 
 class SOWExtractionResponse(BaseModel):
     milestones: List[Milestone] = Field(default_factory=list, description="Extracted milestones with payment info")

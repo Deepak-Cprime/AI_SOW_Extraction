@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     api_port: int = 8000
     debug: bool = True
     tesseract_path: Optional[str] = None
+    targetprocess_domain: Optional[str] = None
+    targetprocess_access_token: Optional[str] = None
     
     class Config:
         env_file = ".env"

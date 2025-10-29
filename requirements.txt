@@ -24,6 +24,7 @@ python-dotenv
 
 # Additional utilities
 requests
+httpx
 Pillow
 numpy
 gunicorn
