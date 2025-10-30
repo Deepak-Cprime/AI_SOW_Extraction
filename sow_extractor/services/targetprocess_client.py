@@ -1,5 +1,6 @@
 import httpx
 import logging
+import xml.etree.ElementTree as ET
 from typing import Dict, List, Any, Optional
 from sow_extractor.core.config import get_settings
 
@@ -70,15 +71,42 @@ class TargetProcessClient:
                     logger.warning("TargetProcess returned empty response")
                     return {"status": "created", "message": "Empty response from TargetProcess"}
 
-                # Try to parse JSON
+                # TargetProcess returns XML by default, parse it
                 try:
-                    result = response.json()
-                    logger.info(f"Successfully sent milestone '{payload['Name']}' to TargetProcess. ID: {result.get('Id')}")
+                    # Parse XML response
+                    root = ET.fromstring(response.text)
+
+                    # Extract key fields from XML
+                    milestone_id = root.get('Id')
+                    milestone_name = root.get('Name')
+
+                    # Extract custom fields
+                    custom_fields = {}
+                    custom_fields_elem = root.find('CustomFields')
+                    if custom_fields_elem is not None:
+                        for field in custom_fields_elem.findall('Field'):
+                            field_name = field.find('Name')
+                            field_value = field.find('Value')
+                            if field_name is not None and field_value is not None:
+                                custom_fields[field_name.text] = field_value.text
+
+                    result = {
+                        "Id": milestone_id,
+                        "Name": milestone_name,
+                        "Description": root.findtext('Description', ''),
+                        "CreateDate": root.findtext('CreateDate', ''),
+                        "ModifyDate": root.findtext('ModifyDate', ''),
+                        "CustomFields": custom_fields,
+                        "status": "created"
+                    }
+
+                    logger.info(f"Successfully sent milestone '{payload['Name']}' to TargetProcess. ID: {milestone_id}")
                     return result
-                except ValueError as json_err:
-                    logger.error(f"Failed to parse JSON response: {json_err}")
-                    logger.error(f"Response text: {response.text}")
-                    return {"status": "unknown", "response_text": response.text}
+
+                except ET.ParseError as xml_err:
+                    logger.error(f"Failed to parse XML response: {xml_err}")
+                    logger.error(f"Response text: {response.text[:500]}")
+                    return {"status": "error", "message": "Failed to parse XML response", "response_text": response.text[:500]}
 
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error sending milestone to TargetProcess: {e.response.status_code}")
