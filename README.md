@@ -4,13 +4,14 @@ A professional FastAPI application that extracts structured information from Sta
 
 ## ✨ Features
 
-- **🔄 Advanced Processing Pipeline**: PDF → Markdown → Section Detection → AI Extraction
-- **🤖 Intelligent Section Filtering**: LLM-powered identification of relevant document sections
-- **📋 One-Shot JSON Extraction**: Template-based extraction with example-driven prompts
-- **📄 Multi-Format PDF Support**: Native text extraction with OCR fallback for scanned documents
-- **🎯 High-Precision Extraction**: Structured data with confidence scoring and validation
+- **🔄 Advanced Processing Pipeline**: PDF → Markdown → Table & Text Extraction → AI Analysis
+- **🤖 AI-Powered Extraction**: GPT-4 powered extraction of milestones and deliverables
+- **📋 Structured Output**: Milestones with payment terms, due dates, and descriptions
+- **📄 Multi-Format PDF Support**: Native text extraction with table detection using pdfplumber
+- **🎯 TargetProcess Integration**: Automatic sync of milestones to TargetProcess KeyMilestones API
 - **⚡ RESTful API**: Production-ready FastAPI endpoints with comprehensive error handling
 - **🏗️ Modular Architecture**: Clean, maintainable codebase with separation of concerns
+- **📊 Base64 Support**: Accept PDFs as base64-encoded content for Salesforce integration
 
 ## 🚀 Quick Start
 
@@ -24,13 +25,29 @@ cd "SOW AI Extraction"
 python setup.py
 ```
 
-### 2. Configure OpenAI API Key
+### 2. Configure Environment Variables
 
-Update the `.env` file with your OpenAI API key:
+Create a `.env` file from the example and update with your credentials:
+
+```bash
+cp .env.example .env
+```
+
+Update the `.env` file with your credentials:
 
 ```env
+# OpenAI Configuration
 OPENAI_API_KEY=your_actual_openai_api_key_here
 OPENAI_MODEL=gpt-4-1106-preview
+
+# API Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+DEBUG=True
+
+# TargetProcess Configuration (optional - for milestone sync)
+TARGETPROCESS_DOMAIN=https://your-instance.tpondemand.com
+TARGETPROCESS_ACCESS_TOKEN=your_access_token_here
 ```
 
 ### 3. Choose Your Processing Method
@@ -61,9 +78,9 @@ python app.py
 
 ## 📡 API Endpoints
 
-### 🎯 Main Extraction Endpoint
+### 🎯 Main Extraction Endpoints
 
-**`POST /extract-sow`** - Upload and process SOW PDF
+**`POST /extract-sow`** - Upload and process SOW PDF (multipart/form-data)
 
 **Request:**
 ```bash
@@ -72,72 +89,91 @@ curl -X POST "http://localhost:8000/extract-sow" \
   -F "file=@your_sow_document.pdf"
 ```
 
+**`POST /extract-sow-base64`** - Process base64-encoded PDF (for Salesforce integration)
+
+**Request:**
+```bash
+curl -X POST "http://localhost:8000/extract-sow-base64" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filename": "sample_sow.pdf",
+    "file_content": "JVBERi0xLjQKJeLjz9MK..."
+  }'
+```
+
 **Response:**
 ```json
 {
   "milestones": [
     {
-      "name": "Project Kickoff and Site Assessment",
-      "description": "Complete initial site survey and establish project team",
-      "due_date": "2024-01-15",
-      "dependencies": ["Contract approval", "Team assignment"],
-      "completion_criteria": "Meeting completed and requirements documented",
-      "payment_amount": "$50,000",
-      "payment_percentage": "10%"
+      "name": "Phase 1",
+      "description": "Requirements Analysis: Initial Review and Planning",
+      "due_date": "2024-07-05",
+      "payment_amount": "$5,000"
+    },
+    {
+      "name": "Phase 2",
+      "description": "Requirements Analysis: Final Documentation & Sign-off",
+      "due_date": "2024-07-15",
+      "payment_amount": "$5,000"
     }
   ],
   "deliverables": [
     {
       "name": "Technical Specification Document",
-      "description": "Comprehensive technical requirements and system architecture",
-      "delivery_date": "2024-01-20",
-      "acceptance_criteria": "Client technical team approval required",
-      "format": "PDF Document (50+ pages)",
-      "related_milestone": "Project Kickoff",
-      "payment_trigger": "Triggers 30% payment upon acceptance"
-    }
-  ],
-  "payment_terms": [
-    {
-      "payment_type": "milestone-based",
-      "amount": "$50,000",
-      "currency": "USD",
-      "percentage": "10%",
-      "trigger": "Completion of Project Kickoff milestone",
-      "due_date": "2024-02-14",
-      "related_milestone": "Project Kickoff and Site Assessment",
-      "related_deliverable": null,
-      "description": "Initial payment upon project start"
+      "description": "Comprehensive technical requirements documentation",
+      "delivery_date": "2024-07-20",
+      "related_milestone": "Phase 1"
     }
   ],
   "metadata": {
-    "processing_confidence": 0.9,
-    "total_sections_found": 21,
-    "relevant_sections": {
-      "milestones": ["PROJECT MILESTONES", "Milestone 1: Project Kickoff"],
-      "deliverables": ["PROJECT DELIVERABLES", "1. Technical Specification"],
-      "payments": ["PAYMENT TERMS AND SCHEDULE", "Payment 1 - Project Initiation"]
-    }
+    "processing_confidence": 0.95,
+    "tables_found": 5,
+    "milestone_tables_identified": 3,
+    "milestones_extracted": 2,
+    "deliverables_extracted": 1,
+    "extraction_method": "enhanced_table_extraction",
+    "processing_time": 23.45,
+    "targetprocess_sync_status": "success",
+    "targetprocess_milestones_sent": 2
   }
 }
 ```
 
+### 🎯 TargetProcess Integration
+
+When TargetProcess credentials are configured, milestones are automatically synced:
+
+**What Gets Sent to TargetProcess:**
+```json
+{
+  "Name": "Phase 1 - Requirements Analysis: Initial Review and Planning",
+  "Date": "2024-07-05",
+  "Payment": "$5,000",
+  "SOW": true
+}
+```
+
+**Note:**
+- Milestone `name` and `description` are combined for the TargetProcess `Name` field
+- Deliverables are NOT sent to TargetProcess (only returned in API response)
+- Sync status is included in response metadata
+
 ### 🔧 Additional Endpoints
 
-- **`POST /extract-sections`** - Extract sections without AI processing (debugging)
-- **`POST /process-section`** - Process individual section with AI
-- **`POST /validate-json`** - Validate JSON structure
+- **`POST /test-targetprocess`** - Test TargetProcess API connectivity
 - **`GET /health`** - Service health check
+- **`GET /`** - API information and available endpoints
 
 ## 💻 Usage Examples
 
 ### Python Integration
 ```python
 import requests
-from sow_extractor import SOWOrchestrator
+import base64
 
-# API Usage
-with open('manufacturing_sow.pdf', 'rb') as f:
+# API Usage - Multipart Upload
+with open('sample_sow.pdf', 'rb') as f:
     response = requests.post(
         'http://localhost:8000/extract-sow',
         files={'file': f}
@@ -145,11 +181,30 @@ with open('manufacturing_sow.pdf', 'rb') as f:
 
 result = response.json()
 print(f"📋 Milestones: {len(result['milestones'])}")
-print(f"📦 Deliverables: {len(result['deliverables'])}")  
-print(f"💰 Payment Terms: {len(result['payment_terms'])}")
+print(f"📦 Deliverables: {len(result['deliverables'])}")
 print(f"🎯 Confidence: {result['metadata']['processing_confidence']}")
+print(f"🔄 TargetProcess Sync: {result['metadata']['targetprocess_sync_status']}")
+
+# API Usage - Base64 Upload (Salesforce Integration)
+with open('sample_sow.pdf', 'rb') as f:
+    pdf_content = base64.b64encode(f.read()).decode('utf-8')
+
+payload = {
+    "filename": "sample_sow.pdf",
+    "file_content": pdf_content
+}
+
+response = requests.post(
+    'http://localhost:8000/extract-sow-base64',
+    json=payload
+)
+
+result = response.json()
+print(f"✅ Milestones sent to TargetProcess: {result['metadata']['targetprocess_milestones_sent']}")
 
 # Direct Package Usage
+from sow_extractor.core.orchestrator import SOWOrchestrator
+
 orchestrator = SOWOrchestrator()
 result = await orchestrator.process_sow_document('path/to/sow.pdf')
 ```
@@ -205,20 +260,17 @@ SOW AI Extraction/
 │
 ├── 📦 sow_extractor/            # Main package
 │   ├── 🎯 core/                 # Core orchestration
-│   │   ├── config.py            # Application settings
-│   │   └── orchestrator.py      # Main processing coordinator
-│   │
-│   ├── 🔄 processors/           # Document processing
-│   │   ├── pdf_processor.py     # PDF text extraction (native + OCR)
-│   │   ├── markdown_converter.py # PDF → Markdown conversion
-│   │   └── section_extractor.py # Title-based section identification
+│   │   ├── config.py            # Application settings & environment config
+│   │   └── orchestrator.py      # Main processing coordinator + TargetProcess sync
 │   │
 │   ├── 🤖 extractors/           # AI-powered extraction
-│   │   ├── section_filter.py    # LLM section relevance filtering
-│   │   └── oneshot_extractor.py # Template-based JSON extraction
+│   │   └── table_extractor.py   # Enhanced table & milestone extraction
+│   │
+│   ├── 🔗 services/             # External integrations
+│   │   └── targetprocess_client.py # TargetProcess API client
 │   │
 │   └── 🛠️ utils/                # Utilities and models
-│       └── models.py            # Pydantic response models
+│       └── models.py            # Pydantic request/response models
 │
 ├── 📥 input_pdfs/               # Input directory for batch processing
 │   └── README.md                # Usage instructions
@@ -252,6 +304,8 @@ Environment variables in `.env` file:
 | `API_PORT` | Port to bind the API | `8000` |
 | `DEBUG` | Enable debug mode | `True` |
 | `TESSERACT_PATH` | Tesseract executable path | Auto-detect |
+| `TARGETPROCESS_DOMAIN` | TargetProcess instance URL (optional) | - |
+| `TARGETPROCESS_ACCESS_TOKEN` | TargetProcess API token (optional) | - |
 
 ## 🔧 System Requirements
 
@@ -286,12 +340,13 @@ All errors return structured JSON responses with:
 
 ## 📈 Recent Improvements
 
-- ✅ **Modular Architecture**: Complete codebase reorganization
-- ✅ **Advanced Pipeline**: PDF → Markdown → AI extraction workflow  
-- ✅ **LLM Section Filtering**: Intelligent section relevance detection
-- ✅ **One-Shot Extraction**: Template-based prompting with examples
-- ✅ **Production Ready**: Clean structure, comprehensive testing
-- ✅ **Documentation**: Updated guides and API documentation
+- ✅ **TargetProcess Integration**: Automatic milestone sync to TargetProcess KeyMilestones API
+- ✅ **XML Response Parsing**: Handle TargetProcess XML responses correctly
+- ✅ **Base64 PDF Support**: Accept base64-encoded PDFs for Salesforce integration
+- ✅ **Enhanced Table Extraction**: Improved milestone extraction from PDF tables using pdfplumber
+- ✅ **Modular Architecture**: Clean separation of concerns with services layer
+- ✅ **Comprehensive Error Handling**: Graceful fallbacks and detailed logging
+- ✅ **Production Ready**: Deployed on Render with environment-based configuration
 
 ## 🤝 Contributing
 
