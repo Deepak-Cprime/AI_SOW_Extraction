@@ -38,9 +38,18 @@ class TargetProcessClient:
             return None
 
         # Prepare payload matching TargetProcess API format
+        # Combine name and description: "Phase 1 - Requirements Analysis: Initial Review and Planning"
+        name = milestone.get("name", "")
+        description = milestone.get("description", "")
+
+        # Create combined name
+        if name and description:
+            combined_name = f"{name} - {description}"
+        else:
+            combined_name = name or description
+
         payload = {
-            "Name": milestone.get("name", ""),
-            "Description": milestone.get("description", ""),
+            "Name": combined_name,
             "Date": milestone.get("due_date", ""),
             "Payment": milestone.get("payment_amount", ""),
             "SOW": True
